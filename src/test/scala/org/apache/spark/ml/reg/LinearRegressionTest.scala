@@ -19,6 +19,10 @@ class LinearRegressionTest extends AnyFlatSpec with should.Matchers with WithSpa
       .setLabelCol("label")
 
     val model = estimator.fit(data)
+
+    model.weights(0) should be (1.0 +- 0.001)
+    model.weights(1) should be (2.0 +- 0.001)
+    model.bias should be(0.0 +- 0.001)
   }
 
   "Estimator" should "work after re-read" in {
@@ -66,8 +70,9 @@ class LinearRegressionTest extends AnyFlatSpec with should.Matchers with WithSpa
 object LinearRegressionTest extends WithSpark {
 
   lazy val _vectors = Seq(
-    Tuple2(Vectors.dense(13.5, 12), 1.0),
-    Tuple2(Vectors.dense(-1, 0), 2.0),
+    Tuple2(Vectors.dense(1, 0), 1.0),
+    Tuple2(Vectors.dense(0, 1), 2.0),
+    Tuple2(Vectors.dense(1, 1), 3.0),
   )
 
   lazy val _data: DataFrame = {

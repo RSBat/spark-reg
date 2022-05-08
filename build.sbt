@@ -7,10 +7,10 @@ lazy val root = (project in file("."))
     name := "spark-reg"
   )
 
-val sparkVersion = "3.0.1"
+val sparkVersion = "3.2.1"
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % sparkVersion withSources(),
   "org.apache.spark" %% "spark-mllib" % sparkVersion withSources()
 )
 
-libraryDependencies += ("org.scalatest" %% "scalatest" % "3.2.2" % "test" withSources())
+libraryDependencies += ("org.scalatest" %% "scalatest" % "3.2.12" % "test" withSources())

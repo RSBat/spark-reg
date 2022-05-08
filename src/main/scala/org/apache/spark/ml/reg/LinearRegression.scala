@@ -9,9 +9,11 @@ import org.apache.spark.ml.regression.{RegressionModel, Regressor}
 import org.apache.spark.ml.util._
 import org.apache.spark.ml.{Estimator, Model, PredictorParams}
 import org.apache.spark.mllib
+import org.apache.spark.mllib.stat.MultivariateOnlineSummarizer
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.types.{DataType, StructType}
 import org.apache.spark.sql.{DataFrame, Dataset, Encoder}
+import org.apache.spark.util.AccumulatorV2
 
 trait LinearRegressionParams extends PredictorParams
 
@@ -23,23 +25,44 @@ class LinearRegression(override val uid: String) extends Regressor[Vector, Linea
   override def train(dataset: Dataset[_]): LinearRegressionModel = {
 
     // Used to convert untyped dataframes to datasets with vectors
-    implicit val encoder : Encoder[Vector] = ExpressionEncoder()
+    implicit val vencoder : Encoder[Vector] = ExpressionEncoder()
+    implicit val dencoder : Encoder[Double] = ExpressionEncoder()
 
-    val vectors: Dataset[Vector] = dataset.select(dataset($(featuresCol)).as[Vector])
-
-    val dim: Int = AttributeGroup.fromStructField((dataset.schema($(featuresCol)))).numAttributes.getOrElse(
-      vectors.first().size
+    val vectors: Dataset[(Vector, Double)] = dataset.select(
+      dataset($(featuresCol)).as[Vector],
+      dataset($(labelCol)).as[Double]
     )
-//
-//    val summary = vectors.rdd.mapPartitions((data: Iterator[Vector]) => {
-//      val result = data.foldLeft(new MultivariateOnlineSummarizer())(
-//        (summarizer, vector) => summarizer.add(mllib.linalg.Vectors.fromBreeze(vector.asBreeze)))
-//      Iterator(result)
-//    }).reduce(_ merge _)
 
-    val weights = Vectors.zeros(dim)
+    val dim: Int = AttributeGroup.fromStructField(dataset.schema($(featuresCol))).numAttributes.getOrElse(
+      vectors.first()._1.size
+    )
 
-    copyValues(new LinearRegressionModel(weights, bias = 0)).setParent(this)
+    var weights = Vectors.zeros(dim)
+    var bias = 0.0
+
+    def add_grads(lhs: (Vector, Double), rhs: (Vector, Double)) = {
+      (Vectors.fromBreeze(lhs._1.asBreeze + rhs._1.asBreeze), lhs._2 + rhs._2)
+    }
+
+    for (_ <- 1 to 1000) {
+      val full_grad = vectors.rdd.mapPartitions[(Vector, Double)]((data: Iterator[(Vector, Double)]) => {
+        val agg_grad = data.map(x => {
+          val features = x._1
+          val label = x._2
+          val prediction = features.dot(weights) + bias
+          val loss = prediction - label
+          val grad: Vector = Vectors.fromBreeze(loss * features.asBreeze)
+          val bias_grad = loss
+          (grad, bias_grad)
+        }).reduce[(Vector, Double)](add_grads)
+        Iterator(agg_grad)
+      }).reduce(add_grads)
+
+      weights = Vectors.fromBreeze(weights.asBreeze - 0.1 * full_grad._1.asBreeze)
+      bias = bias - 0.1 * full_grad._2
+    }
+
+    copyValues(new LinearRegressionModel(weights, bias)).setParent(this)
 
     //    val Row(row: Row) =  dataset
     //      .select(Summarizer.metrics("mean", "std").summary(dataset($(inputCol))))
