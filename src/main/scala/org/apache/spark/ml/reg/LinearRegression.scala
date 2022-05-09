@@ -9,6 +9,8 @@ import org.apache.spark.ml.regression.{RegressionModel, Regressor}
 import org.apache.spark.ml.util._
 import org.apache.spark.ml.{Estimator, Model, PredictorParams}
 import org.apache.spark.mllib
+import org.apache.spark.mllib.linalg.distributed.{IndexedRowMatrix, RowMatrix}
+import org.apache.spark.mllib.linalg.Matrices
 import org.apache.spark.mllib.stat.MultivariateOnlineSummarizer
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.types.{DataType, StructType}
@@ -40,26 +42,30 @@ class LinearRegression(override val uid: String) extends Regressor[Vector, Linea
     var weights = Vectors.zeros(dim)
     var bias = 0.0
 
-    def add_grads(lhs: (Vector, Double), rhs: (Vector, Double)) = {
-      (Vectors.fromBreeze(lhs._1.asBreeze + rhs._1.asBreeze), lhs._2 + rhs._2)
+    def add_grads(lhs: (breeze.linalg.Vector[Double], Double),
+                  rhs: (breeze.linalg.Vector[Double], Double)) = {
+      (lhs._1 + rhs._1, lhs._2 + rhs._2)
     }
 
-    for (_ <- 1 to 1000) {
-      val full_grad = vectors.rdd.mapPartitions[(Vector, Double)]((data: Iterator[(Vector, Double)]) => {
+    val iters = 1000
+    val learningRate = 0.5
+    val rowCount = vectors.count()
+    for (_ <- 1 to iters) {
+      val full_grad = vectors.rdd.mapPartitions((data: Iterator[(Vector, Double)]) => {
         val agg_grad = data.map(x => {
           val features = x._1
           val label = x._2
           val prediction = features.dot(weights) + bias
           val loss = prediction - label
-          val grad: Vector = Vectors.fromBreeze(loss * features.asBreeze)
+          val grad = loss * features.asBreeze
           val bias_grad = loss
           (grad, bias_grad)
-        }).reduce[(Vector, Double)](add_grads)
+        }).reduce(add_grads)
         Iterator(agg_grad)
       }).reduce(add_grads)
 
-      weights = Vectors.fromBreeze(weights.asBreeze - 0.1 * full_grad._1.asBreeze)
-      bias = bias - 0.1 * full_grad._2
+      weights = Vectors.fromBreeze(weights.asBreeze - learningRate / rowCount * full_grad._1)
+      bias = bias - learningRate / rowCount * full_grad._2
     }
 
     copyValues(new LinearRegressionModel(weights, bias)).setParent(this)
