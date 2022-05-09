@@ -20,9 +20,33 @@ class LinearRegressionTest extends AnyFlatSpec with should.Matchers with WithSpa
 
     val model = estimator.fit(data)
 
+    model.weights.leftSide
+
     model.weights(0) should be (1.0 +- 0.001)
     model.weights(1) should be (2.0 +- 0.001)
     model.bias should be(0.0 +- 0.001)
+  }
+
+  "Estimator" should "should produce functional model" in {
+    val estimator = new LinearRegression()
+      .setFeaturesCol("features")
+      .setPredictionCol("prediction")
+      .setLabelCol("label")
+
+    val model = estimator.fit(data)
+
+    validateModel(model, model.transform(data))
+  }
+
+  private def validateModel(model: LinearRegressionModel, data: DataFrame) = {
+    val vectors: Array[Double] = data.collect().map(_.getAs[Double]("prediction"))
+
+    vectors.length should be(3)
+
+    val delta = 0.001
+    vectors(0) should be(1.0 +- delta)
+    vectors(1) should be(2.0 +- delta)
+    vectors(2) should be(3.0 +- delta)
   }
 
   "Estimator" should "work after re-read" in {
@@ -42,10 +66,9 @@ class LinearRegressionTest extends AnyFlatSpec with should.Matchers with WithSpa
 
     val model = reRead.fit(data).stages(0).asInstanceOf[LinearRegressionModel]
 
-//    model.means(0) should be(vectors.map(_(0)).sum / vectors.length +- delta)
-//    model.means(1) should be(vectors.map(_(1)).sum / vectors.length +- delta)
-//
-//    validateModel(model, model.transform(data))
+    model.weights(0) should be (1.0 +- 0.001)
+    model.weights(1) should be (2.0 +- 0.001)
+    model.bias should be(0.0 +- 0.001)
   }
 
   "Model" should "work after re-read" in {
@@ -64,12 +87,14 @@ class LinearRegressionTest extends AnyFlatSpec with should.Matchers with WithSpa
     model.write.overwrite().save(tmpFolder.getAbsolutePath)
 
     val reRead: PipelineModel = PipelineModel.load(tmpFolder.getAbsolutePath)
+
+    validateModel(model.stages(0).asInstanceOf[LinearRegressionModel], reRead.transform(data))
   }
 }
 
 object LinearRegressionTest extends WithSpark {
 
-  lazy val _vectors = Seq(
+  lazy val _vectors: Seq[(Vector, Double)] = Seq(
     Tuple2(Vectors.dense(1, 0), 1.0),
     Tuple2(Vectors.dense(0, 1), 2.0),
     Tuple2(Vectors.dense(1, 1), 3.0),
