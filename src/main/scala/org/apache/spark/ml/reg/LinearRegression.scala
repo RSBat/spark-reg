@@ -58,8 +58,7 @@ class LinearRegression(override val uid: String) extends Regressor[Vector, Linea
     for (_ <- 1 to $(iterations)) {
       val full_grad = vectors.rdd.mapPartitions((data: Iterator[(Vector, Double)]) => {
         val agg_grad = data.map(x => {
-          val features = x._1
-          val label = x._2
+          val (features, label) = x
           val prediction = features.dot(weights) + bias
           val loss = prediction - label
           val grad = loss * features.asBreeze
@@ -74,12 +73,6 @@ class LinearRegression(override val uid: String) extends Regressor[Vector, Linea
     }
 
     copyValues(new LinearRegressionModel(weights, bias)).setParent(this)
-
-    //    val Row(row: Row) =  dataset
-    //      .select(Summarizer.metrics("mean", "std").summary(dataset($(inputCol))))
-    //      .first()
-    //
-    //    copyValues(new LinearRegressionModel(row.getAs[Vector](0).toDense, row.getAs[Vector](1).toDense)).setParent(this)
   }
 
   override def copy(extra: ParamMap): LinearRegression = defaultCopy(extra)

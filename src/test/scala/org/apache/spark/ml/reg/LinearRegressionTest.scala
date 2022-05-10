@@ -35,7 +35,6 @@ class LinearRegressionTest extends AnyFlatSpec with should.Matchers with WithSpa
       .setPredictionCol("predictions")
       .setLabelCol("label")
       .setLearningRate(0.5)
-//      .setIterations(5000)
 
     val model = estimator.fit(noisyData)
 
