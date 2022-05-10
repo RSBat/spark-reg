@@ -2,20 +2,13 @@ package org.apache.spark.ml.reg
 
 import org.apache.spark.ml.attribute.AttributeGroup
 import org.apache.spark.ml.linalg.BLAS.dot
-import org.apache.spark.ml.linalg.{DenseVector, Vector, VectorUDT, Vectors}
-import org.apache.spark.ml.param.shared.{HasInputCol, HasOutputCol}
-import org.apache.spark.ml.param.{BooleanParam, ParamMap}
+import org.apache.spark.ml.linalg.{Vector, Vectors}
+import org.apache.spark.ml.param.ParamMap
 import org.apache.spark.ml.regression.{RegressionModel, Regressor}
 import org.apache.spark.ml.util._
-import org.apache.spark.ml.{Estimator, Model, PredictorParams}
-import org.apache.spark.mllib
-import org.apache.spark.mllib.linalg.distributed.{IndexedRowMatrix, RowMatrix}
-import org.apache.spark.mllib.linalg.Matrices
-import org.apache.spark.mllib.stat.MultivariateOnlineSummarizer
+import org.apache.spark.ml.PredictorParams
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
-import org.apache.spark.sql.types.{DataType, StructType}
-import org.apache.spark.sql.{DataFrame, Dataset, Encoder}
-import org.apache.spark.util.AccumulatorV2
+import org.apache.spark.sql.{Dataset, Encoder}
 
 trait LinearRegressionParams extends PredictorParams
 
