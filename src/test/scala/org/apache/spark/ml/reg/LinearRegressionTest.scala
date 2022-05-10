@@ -11,7 +11,7 @@ class LinearRegressionTest extends AnyFlatSpec with should.Matchers with WithSpa
 
   val delta = 0.0001
   lazy val data: DataFrame = LinearRegressionTest._data
-  lazy val vectors: Seq[(Vector, Double)] = LinearRegressionTest._vectors
+  lazy val noisyData: DataFrame = LinearRegressionTest._noisyData
 
   "Estimator" should "calculate weights" in {
     val estimator = new LinearRegression()
@@ -27,6 +27,25 @@ class LinearRegressionTest extends AnyFlatSpec with should.Matchers with WithSpa
     model.weights(0) should be (1.0 +- delta)
     model.weights(1) should be (2.0 +- delta)
     model.bias should be(0.0 +- delta)
+  }
+
+  "Estimator" should "calculate weights for noisy data" in {
+    val estimator = new LinearRegression()
+      .setFeaturesCol("features")
+      .setPredictionCol("predictions")
+      .setLabelCol("label")
+      .setLearningRate(0.5)
+//      .setIterations(5000)
+
+    val model = estimator.fit(noisyData)
+
+    model.weights.leftSide
+
+    val delta = 0.01
+    model.weights(0) should be (0.5 +- delta)
+    model.weights(1) should be (-1.0 +- delta)
+    model.weights(2) should be (0.2 +- delta)
+    model.bias should be(-0.1 +- delta)
   }
 
   "Estimator" should "should produce functional model" in {
@@ -107,5 +126,25 @@ object LinearRegressionTest extends WithSpark {
   lazy val _data: DataFrame = {
     import sqlc.implicits._
     _vectors.toDF("features", "label")
+  }
+
+  lazy val _noisyVectors: Seq[(Vector, Double)] = Seq(
+    Tuple2(Vectors.dense(-0.17, -0.4, -0.31), 0.163),
+    Tuple2(Vectors.dense(-0.61, -0.76, -0.28), 0.3073),
+    Tuple2(Vectors.dense(0.79, 0.3, 0.07), 0.0177),
+    Tuple2(Vectors.dense(0.83, 0.77, -0.95), -0.6388),
+    Tuple2(Vectors.dense(0.86, 0.25, 0.07), 0.0943),
+    Tuple2(Vectors.dense(0.35, 0.37, 0.8), -0.1257),
+    Tuple2(Vectors.dense(0.23, 0.93, -0.62), -1.0366),
+    Tuple2(Vectors.dense(0.14, 0.69, 0.81), -0.5577),
+    Tuple2(Vectors.dense(0.82, 0.2, -0.81), -0.0429),
+    Tuple2(Vectors.dense(-0.54, 0.19, 0.65), -0.4224)
+  )
+
+  lazy val _noisyWeights: Array[Double] = Array(0.5, -1, 0.2, -0.1)
+
+  lazy val _noisyData: DataFrame = {
+    import sqlc.implicits._
+    _noisyVectors.toDF("features", "label")
   }
 }
