@@ -3,14 +3,28 @@ package org.apache.spark.ml.reg
 import org.apache.spark.ml.attribute.AttributeGroup
 import org.apache.spark.ml.linalg.BLAS.dot
 import org.apache.spark.ml.linalg.{Vector, Vectors}
-import org.apache.spark.ml.param.ParamMap
+import org.apache.spark.ml.param.{DoubleParam, IntParam, ParamMap}
 import org.apache.spark.ml.regression.{RegressionModel, Regressor}
 import org.apache.spark.ml.util._
 import org.apache.spark.ml.PredictorParams
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.{Dataset, Encoder}
 
-trait LinearRegressionParams extends PredictorParams
+trait LinearRegressionParams extends PredictorParams {
+  val learningRate = new DoubleParam(this, "learningRate",
+    "Learning rate for gradient descent")
+
+  def setLearningRate(value: Double) : this.type = set(learningRate, value)
+
+  setDefault(learningRate -> 0.001)
+
+  val iterations = new IntParam(this, "iterations",
+    "Number of iterations of gradient descent")
+
+  def setIterations(value: Int) : this.type = set(iterations, value)
+
+  setDefault(iterations -> 1000)
+}
 
 class LinearRegression(override val uid: String) extends Regressor[Vector, LinearRegression, LinearRegressionModel] with LinearRegressionParams
   with DefaultParamsWritable {
@@ -40,10 +54,8 @@ class LinearRegression(override val uid: String) extends Regressor[Vector, Linea
       (lhs._1 + rhs._1, lhs._2 + rhs._2)
     }
 
-    val iters = 1000
-    val learningRate = 0.5
     val rowCount = vectors.count()
-    for (_ <- 1 to iters) {
+    for (_ <- 1 to $(iterations)) {
       val full_grad = vectors.rdd.mapPartitions((data: Iterator[(Vector, Double)]) => {
         val agg_grad = data.map(x => {
           val features = x._1
@@ -57,8 +69,8 @@ class LinearRegression(override val uid: String) extends Regressor[Vector, Linea
         Iterator(agg_grad)
       }).reduce(add_grads)
 
-      weights = Vectors.fromBreeze(weights.asBreeze - learningRate / rowCount * full_grad._1)
-      bias = bias - learningRate / rowCount * full_grad._2
+      weights = Vectors.fromBreeze(weights.asBreeze - $(learningRate) / rowCount * full_grad._1)
+      bias = bias - $(learningRate) / rowCount * full_grad._2
     }
 
     copyValues(new LinearRegressionModel(weights, bias)).setParent(this)

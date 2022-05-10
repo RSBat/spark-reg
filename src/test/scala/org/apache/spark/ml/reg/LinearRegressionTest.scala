@@ -17,6 +17,7 @@ class LinearRegressionTest extends AnyFlatSpec with should.Matchers with WithSpa
       .setFeaturesCol("features")
       .setPredictionCol("predictions")
       .setLabelCol("label")
+      .setLearningRate(0.5)
 
     val model = estimator.fit(data)
 
@@ -32,6 +33,7 @@ class LinearRegressionTest extends AnyFlatSpec with should.Matchers with WithSpa
       .setFeaturesCol("features")
       .setPredictionCol("predictions")
       .setLabelCol("label")
+      .setLearningRate(0.5)
 
     val model = estimator.fit(data)
 
@@ -56,6 +58,7 @@ class LinearRegressionTest extends AnyFlatSpec with should.Matchers with WithSpa
         .setFeaturesCol("features")
         .setPredictionCol("prediction")
         .setLabelCol("label")
+        .setLearningRate(0.5)
     ))
 
     val tmpFolder = Files.createTempDir()
@@ -78,6 +81,7 @@ class LinearRegressionTest extends AnyFlatSpec with should.Matchers with WithSpa
         .setFeaturesCol("features")
         .setPredictionCol("predictions")
         .setLabelCol("label")
+        .setLearningRate(0.5)
     ))
 
     val model = pipeline.fit(data)
