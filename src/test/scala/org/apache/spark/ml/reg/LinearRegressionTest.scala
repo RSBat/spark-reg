@@ -15,7 +15,7 @@ class LinearRegressionTest extends AnyFlatSpec with should.Matchers with WithSpa
   "Estimator" should "calculate weights" in {
     val estimator = new LinearRegression()
       .setFeaturesCol("features")
-      .setPredictionCol("prediction")
+      .setPredictionCol("predictions")
       .setLabelCol("label")
 
     val model = estimator.fit(data)
@@ -30,7 +30,7 @@ class LinearRegressionTest extends AnyFlatSpec with should.Matchers with WithSpa
   "Estimator" should "should produce functional model" in {
     val estimator = new LinearRegression()
       .setFeaturesCol("features")
-      .setPredictionCol("prediction")
+      .setPredictionCol("predictions")
       .setLabelCol("label")
 
     val model = estimator.fit(data)
@@ -39,7 +39,7 @@ class LinearRegressionTest extends AnyFlatSpec with should.Matchers with WithSpa
   }
 
   private def validateModel(model: LinearRegressionModel, data: DataFrame) = {
-    val vectors: Array[Double] = data.collect().map(_.getAs[Double]("prediction"))
+    val vectors: Array[Double] = data.collect().map(_.getAs[Double]("predictions"))
 
     vectors.length should be(3)
 
